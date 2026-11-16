@@ -1,0 +1,7 @@
+# streamlit/.streamlit/config.toml
+[server]
+headless = true               # pas de navigateur à ouvrir dans le conteneur
+port = 8501
+
+[browser]
+gatherUsageStats = false      # pas de télémétrie

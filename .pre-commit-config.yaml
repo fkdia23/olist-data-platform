@@ -1,0 +1,18 @@
+# .pre-commit-config.yaml : lancé automatiquement à chaque « git commit »
+# Mettre les versions à jour : uv run pre-commit autoupdate
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]          # accepte les balises propres à certains outils
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key    # bloque un commit qui contient une clé privée
+      - id: check-added-large-files
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

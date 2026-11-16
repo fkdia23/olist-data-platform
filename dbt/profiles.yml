@@ -1,0 +1,24 @@
+# dbt/profiles.yml
+olist:                                    # nom du profil ; dbt_project.yml y renvoie (profile: olist)
+  target: dev                             # cible par défaut ; --target duckdb pour en changer
+  outputs:                                # les cibles possibles
+    dev:                                  # cible principale : PostgreSQL 16
+      type: postgres                      # adaptateur à charger (paquet dbt-postgres)
+      host: "{{ env_var('WAREHOUSE_HOST', 'localhost') }}"         # service Docker, ou localhost depuis VS Code
+      port: "{{ env_var('WAREHOUSE_PORT', '5432') | as_number }}"  # as_number convertit le texte en nombre
+      user: "{{ env_var('WAREHOUSE_USER') }}"                      # sans défaut : erreur claire si la variable manque
+      password: "{{ env_var('WAREHOUSE_PASSWORD') }}"              # jamais en clair dans le dépôt
+      dbname: "{{ env_var('WAREHOUSE_DB', 'warehouse') }}"         # base cible
+      schema: analytics                   # schéma des modèles sans +schema
+      threads: 4                          # modèles construits en parallèle
+      connect_timeout: 10                 # secondes avant d'abandonner la connexion
+    duckdb:                               # cible optionnelle pour essayer dbt-duckdb
+      type: duckdb                        # adaptateur dbt-duckdb
+      path: "{{ env_var('DUCKDB_DEV_PATH', '../data/duckdb/dev.duckdb') }}"  # fichier de test, pas mart.duckdb
+      extensions: [postgres]              # extension DuckDB qui sait lire PostgreSQL
+      attach:                             # bases visibles pendant le run
+        - path: "{{ env_var('WAREHOUSE_DSN') }}"   # ex. postgresql://user:mdp@pg16:5432/warehouse
+          type: postgres                  # type de la base attachée
+          alias: pg                       # tables lisibles sous pg.raw.orders
+          read_only: true                 # DuckDB ne modifie pas PostgreSQL
+      threads: 4

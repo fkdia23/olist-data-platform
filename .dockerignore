@@ -1,0 +1,19 @@
+# .dockerignore : ce que « COPY . . » n'envoie jamais à Docker (contexte = racine)
+# Secrets : passés au conteneur par env_file, jamais gravés dans l'image
+.env
+# Environnement local (Linux de WSL) : l'image construit le sien
+.venv/
+.git/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+# Données et sorties : montées en volume ou régénérées
+data/
+logs/
+lineage/events.ndjson
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+# Construits à part, avec leur propre contexte
+streamlit/
+tests/

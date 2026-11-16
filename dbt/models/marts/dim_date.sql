@@ -1,0 +1,3 @@
+-- dbt/models/marts/dim_date.sql
+-- Une ligne par jour, de start_date à fin 2027, avec année, mois, jour de semaine…
+{{ dbt_date.get_date_dimension(var('start_date'), '2027-12-31') }}

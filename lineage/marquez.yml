@@ -1,0 +1,30 @@
+# lineage/marquez.yml : configuration de l'API Marquez, montée dans le conteneur.
+# Elle remplace le marquez.dev.yml de l'image, qui fige la base, l'utilisateur et le mot de passe
+# à « marquez ». ${VAR} est remplacé au démarrage par la variable d'environnement du conteneur.
+server:
+  applicationConnectors:
+    - type: http
+      port: ${MARQUEZ_PORT:-5000}           # API : reçoit les événements OpenLineage
+      httpCompliance: RFC7230_LEGACY
+  adminConnectors:
+    - type: http
+      port: ${MARQUEZ_ADMIN_PORT:-5001}     # santé (/healthcheck) et métriques
+
+db:
+  driverClass: org.postgresql.Driver
+  url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+
+migrateOnStartup: true                      # Flyway crée ou met à jour les tables de Marquez
+
+graphql:
+  enabled: true
+
+logging:
+  level: INFO
+  appenders:
+    - type: console
+
+search:
+  enabled: false                            # pas d'OpenSearch dans le projet

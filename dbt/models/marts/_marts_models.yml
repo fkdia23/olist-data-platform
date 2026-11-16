@@ -1,0 +1,44 @@
+# dbt/models/marts/_marts_models.yml
+models:
+  - name: fct_order_items
+    description: "Grain : une ligne par article de commande."
+    data_tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          arguments:
+            min_value: 1                        # un fait vide est une erreur
+    columns:
+      - name: order_item_key
+        data_tests: [unique, not_null]          # la clé du grain
+      - name: price
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                strictly: true
+              config:
+                severity: error                 # aucun prix faux ne doit atteindre les marts
+      - name: product_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+
+  - name: fct_orders
+    description: "Grain : une ligne par commande."
+    data_tests:
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: delivered_at              # la livraison…
+            column_B: purchased_at              # … jamais avant l'achat
+            or_equal: true
+            row_condition: "delivered_at is not null"   # seulement les commandes livrées
+    columns:
+      - name: purchased_at
+        data_tests:
+          - dbt_expectations.expect_row_values_to_have_recent_data:
+              arguments:
+                datepart: day
+                interval: 1                     # au moins une commande de moins d'un jour
+              config:
+                severity: warn

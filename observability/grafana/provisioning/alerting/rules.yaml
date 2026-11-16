@@ -1,0 +1,149 @@
+# observability/grafana/provisioning/alerting/rules.yaml
+# Règles d'alerte, une par comportement à surveiller. Toutes partent vers olist-alertes
+# (policies.yaml) : e-mail dans Mailpit ET webhook vers le runner, qui les range dans obs.alerts
+# (visibles dans Streamlit et dans le dashboard Olist · Pilotage).
+# Chaque règle : A = requête Prometheus instantanée, C = seuil sur A.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: olist-pipeline
+    folder: Olist
+    interval: 20s                    # multiple de 10 s obligatoire (planificateur de Grafana)
+    rules:
+      - uid: olist-run-failed
+        title: Run en échec
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # séries créées à 0 au démarrage du runner : le premier échec est bien vu
+              expr: sum by (scenario) (increase(runner_runs_total{status="failed"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        labels: { severity: critical }
+        annotations:
+          summary: "Le scénario {{ $labels.scenario }} a échoué"
+          description: "Au moins un run du scénario {{ $labels.scenario }} s'est terminé en échec ces 5 dernières minutes. Détail : console Streamlit ou e-mail récapitulatif."
+
+      - uid: olist-contract-rejects
+        title: Lignes rejetées par le contrat
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(increase(pipeline_rows_total{kind="rejected"}[10m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        labels: { severity: warning }
+        annotations:
+          # increase() extrapole (101,5 pour 100) : valeur arrondie, le chiffre exact est dans l'e-mail du run
+          summary: "Environ {{ printf \"%.0f\" $values.A.Value }} lignes rejetées par le contrat en 10 min"
+          description: "La source livre des lignes que le contrat refuse (format, références). Elles sont archivées dans raw.rejects."
+
+      - uid: olist-quarantine
+        title: Quarantaine au-dessus de 5 %
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: max(pipeline_quarantine_ratio) * 100
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [5] }
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ humanize $values.A.Value }} % des articles en quarantaine (seuil : 5 %)"
+          description: "Des articles conformes au contrat mais faux pour le métier (prix nul, frais négatifs) sont écartés par dbt (intermediate.int_order_items__quarantine)."
+
+      - uid: olist-pg16-temp
+        title: Débordement disque sur pg16
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(increase(pg_stat_database_temp_bytes{datname="warehouse"}[5m])) / 1e6
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                # 400 Mo : un rechargement complet (nominal après reset) en écrit ~150, la surcharge ~730
+                - evaluator: { type: gt, params: [400] }
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        labels: { severity: info }
+        annotations:
+          summary: "{{ humanize $values.A.Value }} Mo de fichiers temporaires sur l'entrepôt en 5 min"
+          description: "Des requêtes dépassent work_mem et débordent sur disque : signe de surcharge (scénario 4)."
+
+      - uid: olist-cron-late
+        title: Cron en retard
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # retard au-delà de deux intervalles prévus ; aucun cron = aucune série = OK
+              expr: max by (schedule_id) (time() - cron_last_success_timestamp_seconds - 2 * cron_expected_interval_seconds)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        labels: { severity: warning }
+        annotations:
+          summary: "Le cron {{ $labels.schedule_id }} n'a pas réussi depuis plus de deux intervalles"

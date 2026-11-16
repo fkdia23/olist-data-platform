@@ -1,0 +1,10 @@
+# observability/grafana/provisioning/dashboards/provider.yaml
+apiVersion: 1
+providers:
+  - name: olist                     # nom interne du fournisseur
+    folder: Olist                   # dossier Grafana où ranger les dashboards
+    type: file                      # lit des fichiers JSON
+    allowUiUpdates: true            # modifiable dans l'interface, à réexporter ensuite
+    updateIntervalSeconds: 30       # relit le dossier toutes les 30 secondes
+    options:
+      path: /etc/grafana/dashboards

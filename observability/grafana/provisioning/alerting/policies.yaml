@@ -1,0 +1,9 @@
+# observability/grafana/provisioning/alerting/policies.yaml
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: olist-alertes          # toutes les alertes vont à ce point de contact
+    group_by: [alertname, severity]  # une notification par règle et par sévérité
+    group_wait: 30s                  # attend 30 s pour regrouper les alertes simultanées
+    group_interval: 5m               # délai avant de notifier un changement du groupe
+    repeat_interval: 4h              # rappel si l'alerte reste active

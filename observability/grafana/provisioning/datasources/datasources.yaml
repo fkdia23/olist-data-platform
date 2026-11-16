@@ -1,0 +1,22 @@
+# observability/grafana/provisioning/datasources/datasources.yaml
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus                 # identifiant fixe : les dashboards exportés s'y réfèrent
+    type: prometheus
+    access: proxy                   # le serveur Grafana interroge, pas le navigateur
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s             # = scrape_interval : évite des points vides
+
+  - name: PostgreSQL obs
+    uid: pg-obs
+    type: postgres
+    url: pg16:5432
+    user: grafana_ro                # rôle en lecture seule
+    secureJsonData:
+      password: $PG16_GRAFANA_PASSWORD   # variable d'environnement développée au chargement
+    jsonData:
+      database: warehouse           # sous jsonData dans les versions actuelles
+      sslmode: disable              # réseau Docker interne

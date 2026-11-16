@@ -1,0 +1,25 @@
+# dbt/models/staging/_sources.yml
+sources:
+  - name: raw                             # nom logique : source('raw', 'orders') dans le SQL
+    schema: raw                           # schéma réel dans PostgreSQL 16
+    description: "Tables brutes ingérées par load-raw, partitionnées par mois."
+    config:                               # depuis dbt 1.10, fraîcheur et colonne de date vont sous config
+      loaded_at_field: _ingested_at       # colonne ajoutée par load-raw à chaque insertion
+      freshness:                          # âge maximal accepté de la dernière ligne
+        warn_after: {count: 6, period: hour}    # au-delà : avertissement
+        error_after: {count: 24, period: hour}  # au-delà : erreur
+    tables:
+      - name: orders
+        description: "Une ligne par commande."
+        columns:
+          - name: order_id
+            description: "Identifiant de la commande, unique."
+      - name: order_items
+      - name: order_payments
+      - name: order_reviews
+      - name: customers
+      - name: products
+      - name: sellers
+      - name: geolocation
+        config:
+          freshness: null                 # table de référence : pas de contrôle de fraîcheur

@@ -1,0 +1,119 @@
+1
+00:00:00,000 --> 00:00:10,000
+Cette troisième vidéo présente le scénario « Contrat cassé », un incident détecté au plus tôt dans la chaîne.
+
+2
+00:00:10,000 --> 00:00:20,000
+Contrairement au cas précédent, les données ne respectent plus leur structure attendue. Elles ne doivent pas être intégrées.
+
+3
+00:00:20,000 --> 00:00:30,000
+Je suis dans Streamlit. Le but est de voir le run échouer de manière contrôlée, explicable et observable.
+
+4
+00:00:30,000 --> 00:00:40,000
+Je clique sur « 2 · Contrat cassé ». Comme toujours, l’interface crée une demande, puis le runner la traite.
+
+5
+00:00:40,000 --> 00:00:50,000
+Le fournisseur va injecter cent enregistrements invalides, répartis entre deux types de problèmes bien identifiés.
+
+6
+00:00:50,000 --> 00:01:00,000
+Les cinquante premiers ont une date illisible, par exemple « 14/11/2026 18h37 », au lieu du format attendu.
+
+7
+00:01:00,000 --> 00:01:10,000
+Les cinquante autres portent une référence client inexistante. Ils cassent l’intégrité référentielle du flux livré.
+
+8
+00:01:10,000 --> 00:01:20,000
+La génération se termine, puis commence load_raw. C’est à ce moment que le contrat Pydantic inspecte chaque ligne.
+
+9
+00:01:20,000 --> 00:01:30,000
+Les formats incorrects et les références absentes sont rejetés. Ils ne sont jamais écrits dans les tables raw normales.
+
+10
+00:01:30,000 --> 00:01:40,000
+Ils ne disparaissent pas pour autant : chaque ligne est archivée dans raw.rejects, avec la raison du rejet et son contenu brut.
+
+11
+00:01:40,000 --> 00:01:50,000
+Cette conservation est importante pour le diagnostic. Elle donne à l’équipe fournisseur des éléments concrets pour corriger le flux.
+
+12
+00:01:50,000 --> 00:02:00,000
+Dans les KPI, nous voyons cent lignes lues et cent lignes rejetées. Aucune donnée incorrecte ne progresse vers dbt.
+
+13
+00:02:00,000 --> 00:02:10,000
+L’option fail-on-reject impose ensuite l’échec du run. C’est un choix volontaire : ici, le contrat est une condition bloquante.
+
+14
+00:02:10,000 --> 00:02:20,000
+Le runner s’arrête au premier échec. Les étapes dbt et de publication DuckDB ne sont donc pas lancées.
+
+15
+00:02:20,000 --> 00:02:30,000
+Le statut devient failed, en rouge. La console garde les logs et le message d’erreur nécessaires pour comprendre l’incident.
+
+16
+00:02:30,000 --> 00:02:40,000
+Cette interruption précoce protège le data mart : aucune transformation ne peut masquer ou propager une donnée structurellement invalide.
+
+17
+00:02:40,000 --> 00:02:50,000
+Je montre maintenant le détail du run et les compteurs. Ils donnent immédiatement la nature et l’ampleur de l’erreur.
+
+18
+00:02:50,000 --> 00:03:00,000
+Le mécanisme est aussi traçable dans l’historique : on peut distinguer ce run des précédents succès sans perdre son contexte.
+
+19
+00:03:00,000 --> 00:03:10,000
+Passons aux alertes. Prometheus collecte les métriques du runner et Grafana évalue les règles opérationnelles.
+
+20
+00:03:10,000 --> 00:03:20,000
+La première règle est « Run en échec », de niveau critique. Elle détecte l’augmentation du compteur des runs failed.
+
+21
+00:03:20,000 --> 00:03:30,000
+La seconde règle est « Lignes rejetées par le contrat ». Elle détecte précisément l’augmentation du compteur de rejets.
+
+22
+00:03:30,000 --> 00:03:40,000
+Après le délai d’évaluation, ces alertes apparaissent dans Streamlit via webhook. Le pilotage et la supervision sont raccordés.
+
+23
+00:03:40,000 --> 00:03:50,000
+J’ouvre Mailpit. Le runner a envoyé un récapitulatif marqué FAILED, et Grafana envoie aussi ses notifications FIRING.
+
+24
+00:03:50,000 --> 00:04:00,000
+L’e-mail permet de prévenir rapidement l’équipe responsable, avec le même contexte que celui visible dans l’interface de pilotage.
+
+25
+00:04:00,000 --> 00:04:10,000
+Lorsque la source est corrigée et qu’un run sain repasse, les alertes peuvent ensuite passer au statut RESOLVED.
+
+26
+00:04:10,000 --> 00:04:20,000
+Ce délai de résolution évite les oscillations : le système ne ferme pas une alerte sur le seul passage d’une métrique ponctuelle.
+
+27
+00:04:20,000 --> 00:04:30,000
+La réponse à l’incident est donc complète : rejet des lignes, preuve conservée, arrêt du traitement, alerte et notification.
+
+28
+00:04:30,000 --> 00:04:40,000
+Le fournisseur peut corriger ses formats ou ses références, puis relancer. L’idempotence garantit que le redémarrage reste sûr.
+
+29
+00:04:40,000 --> 00:04:50,000
+Les trois scénarios montrent ainsi trois états complémentaires : fonctionnement sain, dégradation métier et rupture de contrat.
+
+30
+00:04:50,000 --> 00:05:00,000
+La plateforme ne se contente pas de traiter la donnée : elle rend son état, ses risques et son parcours visibles de bout en bout.

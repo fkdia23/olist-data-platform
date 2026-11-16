@@ -1,0 +1,49 @@
+# observability/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s          # fréquence de collecte par défaut
+  evaluation_interval: 15s      # fréquence d'évaluation des règles, si on en ajoute
+
+scrape_configs:                 # une entrée par famille de cibles
+  - job_name: prometheus        # Prometheus se surveille lui-même
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: cadvisor          # CPU, RAM, disque et réseau de chaque conteneur
+    scrape_interval: 5s         # plus fin : un pic de stress-test dure peu
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: postgres          # état des deux PostgreSQL
+    static_configs:
+      - targets: ["pg16-exporter:9187", "pg13-exporter:9187"]
+
+  - job_name: apis              # latence et codes HTTP des API FastAPI
+    static_configs:
+      - targets: ["source-api:8000"]   # ajouter "mart-api:8000" quand ce service existera
+
+  - job_name: runner            # scénarios, volumétrie, quarantaine, DuckDB, OpenLineage, crons
+    static_configs:
+      - targets: ["runner:8000"]
+
+  # Table de correspondance id -> nom de service des conteneurs du projet. Sous Docker Desktop,
+  # cAdvisor ne nomme pas les conteneurs (/docker/<id> seulement) : Grafana joint ses métriques
+  # à la série up{job="docker-names", container_id, name} produite ici.
+  - job_name: docker-names
+    scrape_interval: 30s
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=olist"]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: name
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
+      - target_label: __address__        # une cible qui répond toujours : Prometheus lui-même
+        replacement: localhost:9090
+    metric_relabel_configs:
+      - source_labels: [__name__]        # aucun échantillon gardé : seule la série up sert
+        regex: .+
+        action: drop

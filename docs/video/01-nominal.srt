@@ -1,0 +1,119 @@
+1
+00:00:00,000 --> 00:00:10,000
+Bienvenue. Dans cette première vidéo, je présente le scénario nominal de la plateforme de données Olist.
+
+2
+00:00:10,000 --> 00:00:20,000
+L’objectif est simple : transformer les commandes du fournisseur en un data mart fiable et observable.
+
+3
+00:00:20,000 --> 00:00:30,000
+Nous allons suivre un même run dans Streamlit, Mailpit et Marquez, de son déclenchement à sa publication.
+
+4
+00:00:30,000 --> 00:00:40,000
+Je suis dans Streamlit, la console de pilotage. Elle affiche l’historique, les étapes et les indicateurs du pipeline.
+
+5
+00:00:40,000 --> 00:00:50,000
+Un point important : Streamlit ne lance pas directement les traitements. Il dépose une demande dans une file en base.
+
+6
+00:00:50,000 --> 00:01:00,000
+Le worker du runner réserve ensuite cette demande et l’exécute. Fermer le navigateur ne stoppe donc pas le run.
+
+7
+00:01:00,000 --> 00:01:10,000
+Je clique maintenant sur « 1 · Nominal ». Le statut passe à queued, puis le runner prend la demande.
+
+8
+00:01:10,000 --> 00:01:20,000
+Les logs défilent en direct. La première étape, generate_normal, prépare les données normales côté fournisseur simulé.
+
+9
+00:01:20,000 --> 00:01:30,000
+La seconde étape est load_raw. Elle lit les données via l’API et les charge dans la zone brute PostgreSQL.
+
+10
+00:01:30,000 --> 00:01:40,000
+Chaque ligne est validée avec un contrat Pydantic : types, formats et références indispensables sont contrôlés.
+
+11
+00:01:40,000 --> 00:01:50,000
+Dans un run nominal, les compteurs de lignes lues et insérées augmentent, tandis que le compteur de rejets reste à zéro.
+
+12
+00:01:50,000 --> 00:02:00,000
+L’ingestion est aussi idempotente : rejouer la même demande ne crée pas de doublon dans les tables brutes.
+
+13
+00:02:00,000 --> 00:02:10,000
+Après le chargement, le runner lance dbt. C’est ici que les données brutes deviennent des modèles exploitables.
+
+14
+00:02:10,000 --> 00:02:20,000
+Les modèles passent par les couches staging, intermediate puis marts. Les tests dbt contrôlent leur cohérence.
+
+15
+00:02:20,000 --> 00:02:30,000
+Dans ce cas, nous attendons sept modèles construits et seize tests réussis. Le résultat reste vert.
+
+16
+00:02:30,000 --> 00:02:40,000
+La dernière étape publie le data mart dans un fichier DuckDB. Sa taille apparaît parmi les indicateurs du run.
+
+17
+00:02:40,000 --> 00:02:50,000
+Le statut final devient succeeded. Nous avons donc une chaîne terminée : source, ingestion, transformation et publication.
+
+18
+00:02:50,000 --> 00:03:00,000
+Je vérifie les chiffres : aucune ligne rejetée, aucune quarantaine, et un data mart publié avec succès.
+
+19
+00:03:00,000 --> 00:03:10,000
+Passons à Mailpit. Le runner envoie un e-mail de synthèse à la fin de chaque exécution, réussie ou échouée.
+
+20
+00:03:10,000 --> 00:03:20,000
+Cet e-mail reprend les étapes, les volumes par table, le bilan dbt et la taille du data mart.
+
+21
+00:03:20,000 --> 00:03:30,000
+Les chiffres sont les mêmes que dans Streamlit, car les deux outils lisent les métriques enregistrées par le runner.
+
+22
+00:03:30,000 --> 00:03:40,000
+Je vais maintenant dans Marquez pour vérifier non seulement le succès, mais aussi la traçabilité de la donnée.
+
+23
+00:03:40,000 --> 00:03:50,000
+J’ouvre le dataset mart.main.fct_order_items, dans l’espace DuckDB. C’est une table finale du data mart.
+
+24
+00:03:50,000 --> 00:04:00,000
+Le graphe montre son origine : les tables de la source, la zone raw, les modèles dbt, puis le fichier DuckDB.
+
+25
+00:04:00,000 --> 00:04:10,000
+Chaque étape émet un événement OpenLineage. Les noms des datasets sont cohérents entre le runner et dbt.
+
+26
+00:04:10,000 --> 00:04:20,000
+Marquez peut donc relier automatiquement les graphes et permettre de remonter d’un indicateur métier à sa source.
+
+27
+00:04:20,000 --> 00:04:30,000
+On peut aussi ouvrir le job d’ingestion : il montre précisément le passage des tables fournisseur vers les tables raw.
+
+28
+00:04:30,000 --> 00:04:40,000
+Le nombre de lignes écrites accompagne l’événement. La traçabilité porte donc sur les objets, mais aussi sur les volumes.
+
+29
+00:04:40,000 --> 00:04:50,000
+Ce scénario nominal démontre qu’un run vert est vérifiable : pilotage, métriques, e-mail et lignage racontent la même histoire.
+
+30
+00:04:50,000 --> 00:05:00,000
+Dans la prochaine vidéo, nous verrons pourquoi un run vert ne signifie pas toujours que les données sont saines.

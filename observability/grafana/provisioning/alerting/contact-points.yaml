@@ -1,0 +1,16 @@
+# observability/grafana/provisioning/alerting/contact-points.yaml
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: olist-alertes
+    receivers:
+      - uid: olist-email
+        type: email
+        settings:
+          addresses: equipe@olist.test       # plusieurs adresses séparées par ;
+          singleEmail: true                  # un seul e-mail pour tous les destinataires
+      - uid: olist-webhook
+        type: webhook
+        settings:
+          url: http://runner:8000/grafana-alerts   # route du runner (section suivante)
+          httpMethod: POST

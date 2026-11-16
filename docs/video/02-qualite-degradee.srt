@@ -1,0 +1,119 @@
+1
+00:00:00,000 --> 00:00:10,000
+Dans cette deuxième vidéo, nous jouons le scénario de qualité dégradée : le piège le plus discret de la plateforme.
+
+2
+00:00:10,000 --> 00:00:20,000
+Ici, le pipeline va réussir techniquement. Pourtant, les données livrées ne seront pas toutes acceptables pour le métier.
+
+3
+00:00:20,000 --> 00:00:30,000
+Cette distinction est essentielle : le contrat contrôle la structure, alors que dbt contrôle les règles métier.
+
+4
+00:00:30,000 --> 00:00:40,000
+Je reviens dans Streamlit. Avant de lancer le scénario, les derniers indicateurs montrent une situation nominale.
+
+5
+00:00:40,000 --> 00:00:50,000
+Je clique sur « 3 · Qualité dégradée ». Une demande est déposée dans la même file que pour le scénario nominal.
+
+6
+00:00:50,000 --> 00:01:00,000
+Le fournisseur va ajouter environ huit pour cent d’articles trompeurs, mais parfaitement valides du point de vue du contrat.
+
+7
+00:01:00,000 --> 00:01:10,000
+Leurs types sont corrects, les formats sont corrects et les références existent. L’ingestion ne doit donc pas les rejeter.
+
+8
+00:01:10,000 --> 00:01:20,000
+Le défaut est métier : certains articles ont un prix nul et d’autres des frais de port négatifs.
+
+9
+00:01:20,000 --> 00:01:30,000
+Les étapes generate_bad_quality puis load_raw se déroulent. Les lignes sont chargées et le compteur de rejets reste à zéro.
+
+10
+00:01:30,000 --> 00:01:40,000
+C’est exactement le comportement attendu : bloquer ces lignes à l’entrée confondrait une règle de structure et une règle métier.
+
+11
+00:01:40,000 --> 00:01:50,000
+La décision est reportée à dbt. Les modèles intermédiaires isolent les articles qui ne respectent pas les règles de vente.
+
+12
+00:01:50,000 --> 00:02:00,000
+Ces articles partent dans intermediate.int_order_items__quarantine, une zone dédiée qui les sépare du flux publiable.
+
+13
+00:02:00,000 --> 00:02:10,000
+Regardons les logs dbt. Deux tests sont en avertissement : ils signalent la dégradation sans arrêter le pipeline.
+
+14
+00:02:10,000 --> 00:02:20,000
+Le run reste donc vert. Cette couleur signifie que l’exécution s’est terminée, pas que chaque donnée est utilisable.
+
+15
+00:02:20,000 --> 00:02:30,000
+Le KPI important apparaît maintenant : le taux de quarantaine est d’environ 7,41 pour cent, au-dessus du seuil défini.
+
+16
+00:02:30,000 --> 00:02:40,000
+Les lignes non conformes au métier n’atteignent jamais le data mart. Un test bloquant sur fct_order_items le garantit.
+
+17
+00:02:40,000 --> 00:02:50,000
+Ainsi, le data mart reste fiable pour ses consommateurs, tout en conservant une trace mesurable du problème de source.
+
+18
+00:02:50,000 --> 00:03:00,000
+Je passe à Grafana. Le dashboard reçoit les métriques du runner, notamment pipeline_quarantine_ratio.
+
+19
+00:03:00,000 --> 00:03:10,000
+La règle « Quarantaine au-dessus de 5 % » est évaluée régulièrement. Avec 7,41 %, elle finit par passer en alerte.
+
+20
+00:03:10,000 --> 00:03:20,000
+Le délai normal est d’environ une minute : temps d’évaluation de la règle, puis regroupement et envoi de la notification.
+
+21
+00:03:20,000 --> 00:03:30,000
+Pendant ce délai, je montre le panneau d’alertes dans Streamlit. Il sera alimenté par le webhook de Grafana.
+
+22
+00:03:30,000 --> 00:03:40,000
+L’alerte est arrivée : elle rend visible un problème qui n’aurait pas été détecté en regardant uniquement le statut vert.
+
+23
+00:03:40,000 --> 00:03:50,000
+J’ouvre Mailpit. Grafana y envoie également un e-mail, ce qui permet d’informer l’équipe sans surveiller le dashboard.
+
+24
+00:03:50,000 --> 00:04:00,000
+On dispose donc de trois niveaux : la quarantaine dans les données, l’indicateur dans Streamlit, et l’alerte opérationnelle.
+
+25
+00:04:00,000 --> 00:04:10,000
+Ce scénario évite deux erreurs opposées : rejeter trop tôt des données bien formées, ou publier des données fausses au métier.
+
+26
+00:04:10,000 --> 00:04:20,000
+Les règles de contrat protègent l’intégration. Les règles dbt protègent l’usage analytique. Les alertes protègent l’exploitation.
+
+27
+00:04:20,000 --> 00:04:30,000
+Un responsable peut donc prioriser la correction chez le fournisseur, sans interrompre automatiquement tous les usages sains.
+
+28
+00:04:30,000 --> 00:04:40,000
+Pour revenir à une situation normale, il suffit ensuite de rejouer une source propre et un scénario nominal.
+
+29
+00:04:40,000 --> 00:04:50,000
+La leçon est la suivante : succès technique et qualité métier sont deux informations différentes, qu’il faut présenter ensemble.
+
+30
+00:04:50,000 --> 00:05:00,000
+Dans la dernière vidéo, le défaut ne sera plus silencieux : le contrat sera cassé et le run devra s’arrêter.

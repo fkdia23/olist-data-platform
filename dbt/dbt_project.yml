@@ -1,0 +1,38 @@
+# dbt/dbt_project.yml
+name: olist                               # nom du projet : clé utilisée sous models:, seeds:, data_tests:
+version: "1.0.0"                          # version de ton projet (informative)
+config-version: 2                         # format de fichier attendu par dbt v1
+profile: olist                            # profil à lire dans profiles.yml
+
+model-paths: ["models"]                   # où dbt cherche chaque type de fichier
+macro-paths: ["macros"]
+test-paths: ["tests"]                     # tests singuliers : requêtes qui doivent renvoyer 0 ligne
+seed-paths: ["seeds"]                     # petits CSV versionnés (traduction des catégories)
+clean-targets: ["target", "dbt_packages"] # dossiers vidés par dbt clean
+
+vars:                                     # variables lues dans le SQL avec var('nom')
+  "dbt_date:time_zone": "Europe/Paris"    # requis par dbt_date, donc par dbt_expectations
+  start_date: "2025-01-01"                # début de la fenêtre simulée
+
+models:
+  olist:                                  # s'applique à tous les modèles du projet
+    staging:                              # = dossier models/staging/
+      +schema: staging                    # schéma PostgreSQL de destination
+      +materialized: view                 # vue : rien de stocké, toujours à jour
+      +tags: ["staging"]                  # permet --select tag:staging
+    intermediate:
+      +schema: intermediate
+      +materialized: table                # table : les comptages de quarantaine restent rapides
+      +tags: ["intermediate"]
+    marts:
+      +schema: marts
+      +materialized: table                # les gros faits passent en incremental dans leur fichier SQL
+      +tags: ["marts"]
+
+seeds:
+  olist:
+    +schema: seeds
+
+data_tests:
+  olist:
+    +schema: audit                        # où store_failures écrit les lignes en échec
